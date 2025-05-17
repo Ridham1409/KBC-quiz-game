@@ -37,10 +37,7 @@ const Timer: React.FC = () => {
       <Progress 
         value={progressPercentage} 
         className="h-2"
-        indicatorClassName={cn(
-          "transition-all duration-1000",
-          getTimerColor()
-        )}
+        indicatorClassName={getTimerColor()}
       />
     </div>
   );
