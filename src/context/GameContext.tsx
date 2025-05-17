@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, Question } from '../types/quiz';
 import { questions, getRandomQuestionByDifficulty } from '../data/questions';
@@ -414,16 +415,54 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     // Get a new question of same difficulty that has not been used
-    const newQuestion = getRandomQuestionByDifficulty(difficulty, [...usedQuestionIds]);
+    const availableQuestions = questions.filter(
+      q => q.difficulty === difficulty && 
+           !usedQuestionIds.includes(q.id) && 
+           q.id !== currentQuestion.id
+    );
     
-    // Add the new question ID to the used list
-    setUsedQuestionIds(prev => [...prev, newQuestion.id]);
+    // If no questions available in the original difficulty, try getting any available question
+    if (availableQuestions.length === 0) {
+      console.log("No questions available in the selected difficulty. Looking for any available question.");
+      const anyAvailableQuestion = questions.filter(
+        q => !usedQuestionIds.includes(q.id) && q.id !== currentQuestion.id
+      );
+      
+      if (anyAvailableQuestion.length === 0) {
+        toast({
+          title: "No questions available",
+          description: "No more questions available to flip to.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const randomIndex = Math.floor(Math.random() * anyAvailableQuestion.length);
+      const newQuestion = anyAvailableQuestion[randomIndex];
+      
+      // Add the new question ID to the used list
+      setUsedQuestionIds(prev => [...prev, newQuestion.id]);
+      
+      // Replace the current question
+      const updatedQuestions = [...gameQuestions];
+      updatedQuestions[gameState.currentQuestionIndex] = newQuestion;
+      
+      setGameQuestions(updatedQuestions);
+    } else {
+      // Select a random question from available questions
+      const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+      const newQuestion = availableQuestions[randomIndex];
+      
+      // Add the new question ID to the used list
+      setUsedQuestionIds(prev => [...prev, newQuestion.id]);
+      
+      // Replace the current question
+      const updatedQuestions = [...gameQuestions];
+      updatedQuestions[gameState.currentQuestionIndex] = newQuestion;
+      
+      setGameQuestions(updatedQuestions);
+    }
     
-    // Replace the current question
-    const updatedQuestions = [...gameQuestions];
-    updatedQuestions[gameState.currentQuestionIndex] = newQuestion;
-    
-    setGameQuestions(updatedQuestions);
     setGameState(prev => ({
       ...prev,
       usedLifelines: {
