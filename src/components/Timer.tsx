@@ -37,7 +37,8 @@ const Timer: React.FC = () => {
       <Progress 
         value={progressPercentage} 
         className="h-2"
-        indicatorClassName={getTimerColor()}
+        // This will be transformed by the modified type definition
+        className2={getTimerColor()}
       />
     </div>
   );

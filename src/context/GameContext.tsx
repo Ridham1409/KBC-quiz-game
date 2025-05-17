@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, Question } from '../types/quiz';
 import { questions, getRandomQuestionByDifficulty } from '../data/questions';
 import { getGuaranteedAmount, prizeLevels } from '../data/prizeData';
 import { useToast } from '@/hooks/use-toast';
+import { Smile, Frown } from 'lucide-react';
 
 interface GameContextProps {
   gameState: GameState;
@@ -56,8 +58,18 @@ export const useGame = (): GameContextProps => {
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
-  const [usedQuestionIds, setUsedQuestionIds] = useState<number[]>([]);
   const { toast } = useToast();
+  
+  // Load used questions from localStorage
+  const [usedQuestionIds, setUsedQuestionIds] = useState<number[]>(() => {
+    const savedIds = localStorage.getItem('usedQuestionIds');
+    return savedIds ? JSON.parse(savedIds) : [];
+  });
+
+  // Save used question IDs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('usedQuestionIds', JSON.stringify(usedQuestionIds));
+  }, [usedQuestionIds]);
 
   useEffect(() => {
     const timer = gameState.timerActive && gameState.timeRemaining > 0
@@ -81,10 +93,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const handleTimerEnd = () => {
     if (gameState.gameStatus === 'in_progress') {
       toast({
-        title: "Time's up!",
+        title: "Time's up! " + String.fromCharCode(9200),
         description: "You ran out of time for this question.",
         variant: "destructive",
       });
+      
       setGameState(prev => ({
         ...prev,
         timerActive: false,
@@ -131,6 +144,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       selectedQuestionIds.push(question.id);
     }
     
+    // If we don't have enough easy questions, reset the easy questions pool
+    if (selectedQuestions.length < 5) {
+      const resetEasyIds = selectedQuestionIds.filter(id => {
+        const question = questions.find(q => q.id === id);
+        return !question || question.difficulty !== 'easy';
+      });
+      
+      // Re-filter with the reset IDs
+      const resetEasyQuestions = questions.filter(q => 
+        q.difficulty === 'easy' && !resetEasyIds.includes(q.id)
+      );
+      
+      while (selectedQuestions.length < 5 && resetEasyQuestions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * resetEasyQuestions.length);
+        const question = resetEasyQuestions.splice(randomIndex, 1)[0];
+        selectedQuestions.push(question);
+        selectedQuestionIds.push(question.id);
+      }
+    }
+    
     // Select 5 medium questions
     const mediumQuestions = questions.filter(q => 
       q.difficulty === 'medium' && !selectedQuestionIds.includes(q.id)
@@ -142,6 +175,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       selectedQuestionIds.push(question.id);
     }
     
+    // If we don't have enough medium questions, reset the medium questions pool
+    if (selectedQuestions.length < 10) {
+      const resetMediumIds = selectedQuestionIds.filter(id => {
+        const question = questions.find(q => q.id === id);
+        return !question || question.difficulty !== 'medium';
+      });
+      
+      // Re-filter with the reset IDs
+      const resetMediumQuestions = questions.filter(q => 
+        q.difficulty === 'medium' && !resetMediumIds.includes(q.id)
+      );
+      
+      while (selectedQuestions.length < 10 && resetMediumQuestions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * resetMediumQuestions.length);
+        const question = resetMediumQuestions.splice(randomIndex, 1)[0];
+        selectedQuestions.push(question);
+        selectedQuestionIds.push(question.id);
+      }
+    }
+    
     // Select 5 hard questions
     const hardQuestions = questions.filter(q => 
       q.difficulty === 'hard' && !selectedQuestionIds.includes(q.id)
@@ -151,6 +204,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const question = hardQuestions.splice(randomIndex, 1)[0];
       selectedQuestions.push(question);
       selectedQuestionIds.push(question.id);
+    }
+    
+    // If we don't have enough hard questions, reset the hard questions pool
+    if (selectedQuestions.length < 15) {
+      const resetHardIds = selectedQuestionIds.filter(id => {
+        const question = questions.find(q => q.id === id);
+        return !question || question.difficulty !== 'hard';
+      });
+      
+      // Re-filter with the reset IDs
+      const resetHardQuestions = questions.filter(q => 
+        q.difficulty === 'hard' && !resetHardIds.includes(q.id)
+      );
+      
+      while (selectedQuestions.length < 15 && resetHardQuestions.length > 0) {
+        const randomIndex = Math.floor(Math.random() * resetHardQuestions.length);
+        const question = resetHardQuestions.splice(randomIndex, 1)[0];
+        selectedQuestions.push(question);
+        selectedQuestionIds.push(question.id);
+      }
     }
     
     // Update the used question IDs
@@ -221,7 +294,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             gameStatus: 'won',
           }));
           toast({
-            title: "Congratulations!",
+            title: "Congratulations! " + String.fromCharCode(128512), // Smile emoji
             description: "You've won the grand prize of ₹1 Crore!",
           });
         } else {
@@ -236,7 +309,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
         toast({
           variant: "destructive",
-          title: "Wrong Answer!",
+          title: "Wrong Answer! " + String.fromCharCode(128577), // Frown emoji
           description: `You'll take home ${getFinalPrize()}.`,
         });
       }
