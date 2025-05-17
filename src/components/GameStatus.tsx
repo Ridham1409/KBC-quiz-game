@@ -12,33 +12,25 @@ import {
 } from '@/components/ui/dialog';
 
 const GameStatus: React.FC = () => {
-  const { gameState, restartGame, quitGame, nextQuestion, getFinalPrize } = useGame();
-  const { gameStatus, revealAnswer, isAnswerCorrect, currentLevel } = gameState;
+  const { gameState, restartGame, quitGame, getFinalPrize } = useGame();
+  const { gameStatus } = gameState;
   
-  const showResult = revealAnswer && isAnswerCorrect && gameStatus === 'in_progress';
+  // Only show for game over states (won, lost, quit)
   const isGameOver = gameStatus === 'won' || gameStatus === 'lost' || gameStatus === 'quit';
   
   const [open, setOpen] = React.useState(false);
   
   React.useEffect(() => {
-    setOpen(showResult || isGameOver);
-  }, [showResult, isGameOver]);
+    setOpen(isGameOver);
+  }, [isGameOver]);
   
-  if (!showResult && !isGameOver) return null;
+  if (!isGameOver) return null;
   
   let title = '';
   let description = '';
   let primaryAction = null;
-  let secondaryAction = null;
   
-  if (showResult) {
-    title = 'Correct Answer!';
-    description = currentLevel === 15 
-      ? "Congratulations! You've reached the final question and won the top prize!" 
-      : "Great job! Let's move on to the next question.";
-    primaryAction = <Button onClick={nextQuestion}>Next Question</Button>;
-    secondaryAction = <Button variant="outline" onClick={quitGame}>Quit & Take Prize</Button>;
-  } else if (gameStatus === 'won') {
+  if (gameStatus === 'won') {
     title = "Congratulations! You've Won!";
     description = `You've won the top prize of ₹1 Crore!`;
     primaryAction = <Button onClick={restartGame}>Play Again</Button>;
@@ -59,8 +51,7 @@ const GameStatus: React.FC = () => {
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          {secondaryAction}
+        <DialogFooter>
           {primaryAction}
         </DialogFooter>
       </DialogContent>

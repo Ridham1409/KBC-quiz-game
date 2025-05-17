@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, Question } from '../types/quiz';
 import { questions, getRandomQuestionByDifficulty } from '../data/questions';
@@ -55,6 +54,7 @@ export const useGame = (): GameContextProps => {
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
+  const [usedQuestionIds, setUsedQuestionIds] = useState<number[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -113,17 +113,52 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   };
 
-  const selectQuestions = (): Question[] => {
-    // Select 5 easy, 5 medium, and 5 hard questions to make 15 questions total
-    const easyQuestions = questions.filter(q => q.difficulty === 'easy').slice(0, 5);
-    const mediumQuestions = questions.filter(q => q.difficulty === 'medium').slice(0, 5);
-    const hardQuestions = questions.filter(q => q.difficulty === 'hard').slice(0, 5);
+  const selectRandomQuestions = (): Question[] => {
+    // Keep track of selected question IDs to avoid repetition
+    const selectedQuestionIds: number[] = [...usedQuestionIds];
+    const selectedQuestions: Question[] = [];
     
-    return [...easyQuestions, ...mediumQuestions, ...hardQuestions];
+    // Select 5 easy questions
+    const easyQuestions = questions.filter(q => 
+      q.difficulty === 'easy' && !selectedQuestionIds.includes(q.id)
+    );
+    for (let i = 0; i < 5 && easyQuestions.length > 0; i++) {
+      const randomIndex = Math.floor(Math.random() * easyQuestions.length);
+      const question = easyQuestions.splice(randomIndex, 1)[0];
+      selectedQuestions.push(question);
+      selectedQuestionIds.push(question.id);
+    }
+    
+    // Select 5 medium questions
+    const mediumQuestions = questions.filter(q => 
+      q.difficulty === 'medium' && !selectedQuestionIds.includes(q.id)
+    );
+    for (let i = 0; i < 5 && mediumQuestions.length > 0; i++) {
+      const randomIndex = Math.floor(Math.random() * mediumQuestions.length);
+      const question = mediumQuestions.splice(randomIndex, 1)[0];
+      selectedQuestions.push(question);
+      selectedQuestionIds.push(question.id);
+    }
+    
+    // Select 5 hard questions
+    const hardQuestions = questions.filter(q => 
+      q.difficulty === 'hard' && !selectedQuestionIds.includes(q.id)
+    );
+    for (let i = 0; i < 5 && hardQuestions.length > 0; i++) {
+      const randomIndex = Math.floor(Math.random() * hardQuestions.length);
+      const question = hardQuestions.splice(randomIndex, 1)[0];
+      selectedQuestions.push(question);
+      selectedQuestionIds.push(question.id);
+    }
+    
+    // Update the used question IDs
+    setUsedQuestionIds(selectedQuestionIds);
+    
+    return selectedQuestions;
   };
 
   const startGame = () => {
-    const selectedQuestions = selectQuestions();
+    const selectedQuestions = selectRandomQuestions();
     setGameQuestions(selectedQuestions);
     setGameState({
       ...initialGameState,
@@ -170,6 +205,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             title: "Congratulations!",
             description: "You've won the grand prize of ₹1 Crore!",
           });
+        } else {
+          // Proceed to next question directly without showing the popup
+          nextQuestion();
         }
       } else {
         // Lost the game
@@ -187,7 +225,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const nextQuestion = () => {
-    if (gameState.currentLevel >= 15 || !gameState.isAnswerCorrect) return;
+    if (gameState.currentLevel >= 15) return;
 
     setGameState(prev => ({
       ...prev,
@@ -375,9 +413,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       difficulty = 'hard';
     }
     
-    // Get a new question of same difficulty
-    const usedQuestionIds = gameQuestions.map(q => q.id);
-    const newQuestion = getRandomQuestionByDifficulty(difficulty, usedQuestionIds);
+    // Get a new question of same difficulty that has not been used
+    const newQuestion = getRandomQuestionByDifficulty(difficulty, [...usedQuestionIds]);
+    
+    // Add the new question ID to the used list
+    setUsedQuestionIds(prev => [...prev, newQuestion.id]);
     
     // Replace the current question
     const updatedQuestions = [...gameQuestions];
