@@ -3,7 +3,7 @@ import React from 'react';
 import { useGame } from '@/context/GameContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { LightbulbOff, Timer, Phone } from 'lucide-react';
+import { HelpCircle, Users, PhoneCall } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const Lifelines: React.FC = () => {
@@ -12,10 +12,10 @@ const Lifelines: React.FC = () => {
     useFiftyFifty,
     useAudiencePoll,
     usePhoneAFriend,
-    useFlipQuestion
+    useDoubleDip
   } = useGame();
 
-  const { usedLifelines, gameStatus } = gameState;
+  const { usedLifelines, gameStatus, doubleDipActive, firstAttemptWrong } = gameState;
   const gameActive = gameStatus === 'in_progress';
 
   return (
@@ -53,7 +53,7 @@ const Lifelines: React.FC = () => {
                   : "from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
               )}
             >
-              <span className="text-2xl">👥</span>
+              <Users size={24} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -73,7 +73,7 @@ const Lifelines: React.FC = () => {
                   : "from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
               )}
             >
-              <Phone size={24} />
+              <PhoneCall size={24} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -84,20 +84,24 @@ const Lifelines: React.FC = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              onClick={useFlipQuestion}
-              disabled={usedLifelines.flipQuestion || !gameActive}
+              onClick={useDoubleDip}
+              disabled={usedLifelines.doubleDip || !gameActive}
               className={cn(
                 "rounded-full h-16 w-16 p-0 bg-gradient-to-br",
-                usedLifelines.flipQuestion
+                usedLifelines.doubleDip
                   ? "from-gray-600 to-gray-800 opacity-50"
-                  : "from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
+                  : doubleDipActive && firstAttemptWrong
+                    ? "from-orange-400 to-red-500 animate-pulse"
+                    : doubleDipActive
+                      ? "from-orange-400 to-red-500"
+                      : "from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
               )}
             >
-              <LightbulbOff size={24} />
+              <HelpCircle size={24} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Replace with a new question</p>
+            <p>{doubleDipActive && firstAttemptWrong ? "Second chance active" : "Make two attempts on a question"}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

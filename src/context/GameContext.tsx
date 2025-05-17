@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, Question } from '../types/quiz';
 import { questions, getRandomQuestionByDifficulty } from '../data/questions';
@@ -17,7 +16,7 @@ interface GameContextProps {
   useFiftyFifty: () => void;
   useAudiencePoll: () => void;
   usePhoneAFriend: () => void;
-  useFlipQuestion: () => void;
+  useDoubleDip: () => void;
   getCurrentPrize: () => string;
   getFinalPrize: () => string;
   startTimer: () => void;
@@ -36,10 +35,12 @@ const initialGameState: GameState = {
     fiftyFifty: false,
     audiencePoll: false,
     phoneAFriend: false,
-    flipQuestion: false,
+    doubleDip: false,
   },
   timerActive: false,
   timeRemaining: 30,
+  doubleDipActive: false,
+  firstAttemptWrong: false,
 };
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -186,6 +187,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const currentQuestion = gameQuestions[gameState.currentQuestionIndex];
     const isCorrect = gameState.selectedOption === currentQuestion.correctAnswer;
 
+    // Special handling for double dip
+    if (gameState.doubleDipActive && !isCorrect && !gameState.firstAttemptWrong) {
+      // First attempt was wrong in double dip
+      setGameState(prev => ({
+        ...prev,
+        selectedOption: null,
+        firstAttemptWrong: true,
+      }));
+      
+      toast({
+        title: "First attempt incorrect",
+        description: "You have one more attempt with Double Dip.",
+      });
+      
+      return;
+    }
+
     setGameState(prev => ({
       ...prev,
       revealAnswer: true,
@@ -240,6 +258,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       phoneAFriendSuggestion: undefined,
       timeRemaining: 30,
       timerActive: true,
+      doubleDipActive: false,
+      firstAttemptWrong: false,
     }));
   };
 
@@ -395,88 +415,25 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const useFlipQuestion = () => {
+  const useDoubleDip = () => {
     if (
-      gameState.usedLifelines.flipQuestion || 
+      gameState.usedLifelines.doubleDip || 
       gameState.revealAnswer || 
       gameState.selectedOption !== null
     ) return;
-
-    const currentQuestion = gameQuestions[gameState.currentQuestionIndex];
-    let difficulty: 'easy' | 'medium' | 'hard';
-    
-    // Determine difficulty based on level
-    if (gameState.currentLevel <= 5) {
-      difficulty = 'easy';
-    } else if (gameState.currentLevel <= 10) {
-      difficulty = 'medium';
-    } else {
-      difficulty = 'hard';
-    }
-    
-    // Get a new question of same difficulty that has not been used
-    const availableQuestions = questions.filter(
-      q => q.difficulty === difficulty && 
-           !usedQuestionIds.includes(q.id) && 
-           q.id !== currentQuestion.id
-    );
-    
-    // If no questions available in the original difficulty, try getting any available question
-    if (availableQuestions.length === 0) {
-      console.log("No questions available in the selected difficulty. Looking for any available question.");
-      const anyAvailableQuestion = questions.filter(
-        q => !usedQuestionIds.includes(q.id) && q.id !== currentQuestion.id
-      );
-      
-      if (anyAvailableQuestion.length === 0) {
-        toast({
-          title: "No questions available",
-          description: "No more questions available to flip to.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const randomIndex = Math.floor(Math.random() * anyAvailableQuestion.length);
-      const newQuestion = anyAvailableQuestion[randomIndex];
-      
-      // Add the new question ID to the used list
-      setUsedQuestionIds(prev => [...prev, newQuestion.id]);
-      
-      // Replace the current question
-      const updatedQuestions = [...gameQuestions];
-      updatedQuestions[gameState.currentQuestionIndex] = newQuestion;
-      
-      setGameQuestions(updatedQuestions);
-    } else {
-      // Select a random question from available questions
-      const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-      const newQuestion = availableQuestions[randomIndex];
-      
-      // Add the new question ID to the used list
-      setUsedQuestionIds(prev => [...prev, newQuestion.id]);
-      
-      // Replace the current question
-      const updatedQuestions = [...gameQuestions];
-      updatedQuestions[gameState.currentQuestionIndex] = newQuestion;
-      
-      setGameQuestions(updatedQuestions);
-    }
     
     setGameState(prev => ({
       ...prev,
       usedLifelines: {
         ...prev.usedLifelines,
-        flipQuestion: true,
+        doubleDip: true,
       },
-      eliminations: undefined,
-      audienceResults: undefined,
-      phoneAFriendSuggestion: undefined,
+      doubleDipActive: true,
     }));
     
     toast({
-      title: "Flip Question Used",
-      description: "The question has been replaced with a new one.",
+      title: "Double Dip Activated!",
+      description: "You can now make two attempts on this question.",
     });
   };
 
@@ -513,7 +470,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       useFiftyFifty,
       useAudiencePoll,
       usePhoneAFriend,
-      useFlipQuestion,
+      useDoubleDip,
       getCurrentPrize,
       getFinalPrize,
       startTimer,

@@ -25,11 +25,13 @@ export interface GameState {
     fiftyFifty: boolean;
     audiencePoll: boolean;
     phoneAFriend: boolean;
-    flipQuestion: boolean;
+    doubleDip: boolean;
   };
   eliminations?: number[];
   audienceResults?: number[];
   phoneAFriendSuggestion?: number;
   timerActive: boolean;
   timeRemaining: number;
+  doubleDipActive: boolean;
+  firstAttemptWrong: boolean;
 }

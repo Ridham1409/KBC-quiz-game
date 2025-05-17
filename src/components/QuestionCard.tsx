@@ -14,7 +14,7 @@ const QuestionCard: React.FC = () => {
 
   if (!currentQuestion) return null;
 
-  const { selectedOption, revealAnswer, eliminations } = gameState;
+  const { selectedOption, revealAnswer, eliminations, doubleDipActive, firstAttemptWrong } = gameState;
   const hasSelected = selectedOption !== null;
 
   const getOptionClassNames = (optionIndex: number) => {
@@ -40,6 +40,19 @@ const QuestionCard: React.FC = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto p-6 bg-card rounded-xl shadow-lg animate-fade-in">
+      {doubleDipActive && (
+        <div className={cn(
+          "mb-4 p-2 rounded-md text-center font-medium",
+          firstAttemptWrong 
+            ? "bg-amber-100 text-amber-800 border border-amber-300"
+            : "bg-blue-100 text-blue-800 border border-blue-300"
+        )}>
+          {firstAttemptWrong 
+            ? "First attempt was incorrect. You have one more try!" 
+            : "Double Dip active: You have two attempts for this question!"}
+        </div>
+      )}
+      
       <h3 className="text-xl md:text-2xl mb-8 font-bold text-center">
         {currentQuestion.text}
       </h3>
@@ -61,10 +74,15 @@ const QuestionCard: React.FC = () => {
         <Button 
           onClick={confirmAnswer}
           disabled={selectedOption === null || revealAnswer}
-          className="bg-quiz-primary hover:bg-quiz-secondary text-white px-8 py-2"
+          className={cn(
+            "px-8 py-2 text-white",
+            doubleDipActive && !revealAnswer 
+              ? "bg-orange-500 hover:bg-orange-600" 
+              : "bg-quiz-primary hover:bg-quiz-secondary"
+          )}
           size="lg"
         >
-          Final Answer
+          {doubleDipActive && firstAttemptWrong ? "Final Answer (Last Attempt)" : "Final Answer"}
         </Button>
       </div>
     </div>
